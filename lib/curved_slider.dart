@@ -28,6 +28,8 @@ class _CurvedSliderState extends State<CurvedSlider> {
   static double _containerWidth = 400;
   Offset _sliderStart;
   Offset _sliderEnd;
+  Offset _tempOldStart;
+  Offset _tempOldEnd;
   bool _movingStartNode;
   bool _movingEndNode;
   double _thumbRadius = 30;
@@ -178,9 +180,6 @@ class _CurvedSliderState extends State<CurvedSlider> {
       double values = _sliderEndValue.toDouble() - _sliderStartValue.toDouble();
       double interpolatedValue = MathUtil.interpolate(portion, total, values);
       double adjustedValue = interpolatedValue + _sliderStartValue;
-      if(adjustedValue.isInfinite || adjustedValue.isNaN) {
-        return 0;
-      }
       return adjustedValue.round();
     }
   }
@@ -195,14 +194,16 @@ class _CurvedSliderState extends State<CurvedSlider> {
     int divisor = 2;
     double angle = MathUtil.getAngleInRadians(MathUtil.screenToEllipseSpace(position, MathUtil.getEllipseCenterOffset(_sliderStart, _sliderEnd)));
     int curValue = interpolateSliderToValue(position, sliderStart, sliderEnd);
+    int quadrant = MathUtil.getEllipseQuadrant(sliderStart, sliderEnd);
     while(curValue != value) {
       divisor *= 2;
-      if(curValue < value) {
+      if((quadrant % 2 == 1 && curValue > value)
+          || (quadrant % 2 == 0 && curValue < value)) {
         angle += pi/divisor;
       } else {
         angle -= pi/divisor;
       }
-      position = MathUtil.projectAngleOnEllipse(angle, sliderStart, sliderEnd);
+      position = MathUtil.ellipseToScreenSpace(MathUtil.projectAngleOnEllipse(angle, sliderStart, sliderEnd),MathUtil.getEllipseCenterOffset(sliderStart, sliderEnd));
       if(position.dx.isNaN || position.dy.isNaN) {
         return Offset(0,0);
       }
@@ -214,8 +215,12 @@ class _CurvedSliderState extends State<CurvedSlider> {
   void startEditSlider(PointerDownEvent event) {
     if(MathUtil.distanceBetween(_sliderStart, event.localPosition) <= 20) {
       _movingStartNode = true;
+      _tempOldStart = _sliderStart;
+      _tempOldEnd = _sliderEnd;
     } else if(MathUtil.distanceBetween(_sliderEnd, event.localPosition) <= 20) {
       _movingEndNode = true;
+      _tempOldStart = _sliderStart;
+      _tempOldEnd = _sliderEnd;
     }
   }
 
@@ -224,14 +229,12 @@ class _CurvedSliderState extends State<CurvedSlider> {
         && !(_sliderStart.dx == event.localPosition.dx
             && _sliderStart.dy == event.localPosition.dy)) {
       setState(() {
-        adjustThumbPositions(_sliderStart, _sliderEnd, event.localPosition, _sliderEnd);
         _sliderStart = event.localPosition;
       });
     } else if(_movingEndNode
         && !(_sliderEnd.dx == event.localPosition.dx
             && _sliderEnd.dy == event.localPosition.dy)) {
       setState(() {
-        adjustThumbPositions(_sliderStart, _sliderEnd, _sliderStart, event.localPosition);
         _sliderEnd = event.localPosition;
       });
     }
@@ -239,14 +242,18 @@ class _CurvedSliderState extends State<CurvedSlider> {
 
   void stopEditSlider(PointerUpEvent event) {
     _movingStartNode = _movingEndNode = false;
+    if(_tempOldStart != null && _tempOldEnd != null) {
+      setState(() => adjustThumbPositions(_tempOldStart, _tempOldEnd, _sliderStart, _sliderEnd));
+    }
+    _tempOldEnd = null;
+    _tempOldStart = null;
   }
 
   void adjustThumbPositions(Offset oldStart, Offset oldEnd, Offset newStart, Offset newEnd) {
     for(int i = 0; i < _thumbs.length; i++) {
       _thumbs[i].activate();
-      _thumbs[i].moveThumb(newStart);
-      //int value = interpolateSliderToValue(_thumbs[i].getPosition(), oldStart, oldEnd);
-      //_thumbs[i].moveThumb(interpolateValueToSlider(value, newStart, newEnd));
+      int value = interpolateSliderToValue(_thumbs[i].getPosition(), oldStart, oldEnd);
+      _thumbs[i].moveThumb(interpolateValueToSlider(value, newStart, newEnd));
       _thumbs[i].deactivate();
     }
     widget.onValueChanged(getThumbValues());
