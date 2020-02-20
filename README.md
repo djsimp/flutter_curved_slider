@@ -1,4 +1,4 @@
-# flutter_app_moving_slider
+# flutter_curved_slider
 
 A new Flutter application.
 
