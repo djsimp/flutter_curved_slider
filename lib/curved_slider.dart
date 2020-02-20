@@ -228,14 +228,26 @@ class _CurvedSliderState extends State<CurvedSlider> {
     if(_movingStartNode
         && !(_sliderStart.dx == event.localPosition.dx
             && _sliderStart.dy == event.localPosition.dy)) {
+      Offset newStart = event.localPosition;
+      if((newStart.dy - _sliderEnd.dy).abs() <= 5) {
+        newStart = Offset(newStart.dx, _sliderEnd.dy);
+      } else if((newStart.dx - _sliderEnd.dx).abs() <= 5) {
+        newStart = Offset(_sliderEnd.dx, newStart.dy);
+      }
       setState(() {
-        _sliderStart = event.localPosition;
+        _sliderStart = newStart;
       });
     } else if(_movingEndNode
         && !(_sliderEnd.dx == event.localPosition.dx
             && _sliderEnd.dy == event.localPosition.dy)) {
+      Offset newEnd = event.localPosition;
+      if((newEnd.dy - _sliderStart.dy).abs() <= 5) {
+        newEnd = Offset(newEnd.dx, _sliderStart.dy);
+      } else if((newEnd.dx - _sliderStart.dx).abs() <= 5) {
+        newEnd = Offset(_sliderStart.dx, newEnd.dy);
+      }
       setState(() {
-        _sliderEnd = event.localPosition;
+        _sliderEnd = newEnd;
       });
     }
   }

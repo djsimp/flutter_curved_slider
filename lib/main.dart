@@ -51,7 +51,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Color textColor = _inactiveColor;
   static const int _sliderLeftValue = 0;
   static const int _sliderRightValue = 100;
-  static const int _thumbCount = 1;
+  static const int _thumbCount = 2;
   String _sliderValue;
 
   @override
